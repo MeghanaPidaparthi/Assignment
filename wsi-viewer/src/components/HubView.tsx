@@ -1,33 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import OpenSeadragon from 'openseadragon';
 import styled from 'styled-components';
 import { Paper, CircularProgress } from '@mui/material';
 
 const HubContainer = styled.div`
+  width: 100%;
   height: 100%;
   position: relative;
+  background: ${({ theme }) => theme.palette.background.paper};
+  border-radius: 8px;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-  }
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
-const ViewportIndicator = styled.div<{ x: number; y: number; width: number; height: number }>`
+const ViewportIndicator = styled.div<{ $position: { x: number; y: number; width: number; height: number } }>`
   position: absolute;
   border: 2px solid #E74C3C;
   background: rgba(231, 76, 60, 0.1);
   pointer-events: none;
+  z-index: 2;
   transition: all 0.3s ease;
-  top: ${props => props.y}%;
-  left: ${props => props.x}%;
-  width: ${props => props.width}%;
-  height: ${props => props.height}%;
-  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(2px);
+  top: ${props => props.$position.y}%;
+  left: ${props => props.$position.x}%;
+  width: ${props => props.$position.width}%;
+  height: ${props => props.$position.height}%;
 `;
 
 const LoadingContainer = styled.div`
@@ -52,50 +48,45 @@ interface HubViewProps {
   };
 }
 
-const HubView: React.FC<HubViewProps> = ({
-  imageUrl,
-  viewportPosition
-}) => {
-  const [isLoading, setIsLoading] = useState(true);
+const HubView: React.FC<HubViewProps> = ({ imageUrl, viewportPosition }) => {
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const viewerInstance = useRef<OpenSeadragon.Viewer | null>(null);
+
+  useEffect(() => {
+    if (!viewerRef.current) return;
+
+    viewerInstance.current = OpenSeadragon({
+      element: viewerRef.current,
+      tileSources: {
+        type: 'image',
+        url: imageUrl
+      },
+      showNavigationControl: false,
+      showNavigator: false,
+      constrainDuringPan: true,
+      visibilityRatio: 1,
+      homeFillsViewer: true,
+      mouseNavEnabled: false,
+      gestureSettingsMouse: {
+        clickToZoom: false,
+        dblClickToZoom: false,
+        pinchToZoom: false,
+        scrollToZoom: false,
+        flickEnabled: false
+      }
+    });
+
+    return () => {
+      if (viewerInstance.current) {
+        viewerInstance.current.destroy();
+      }
+    };
+  }, [imageUrl]);
 
   return (
     <HubContainer>
-      <Paper 
-        elevation={0}
-        sx={{
-          height: '100%',
-          overflow: 'hidden',
-          borderRadius: '12px',
-          position: 'relative'
-        }}
-      >
-        <img 
-          src={imageUrl} 
-          alt="Overview"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: isLoading ? 0 : 1,
-            transition: 'opacity 0.3s ease'
-          }}
-          onLoad={() => setIsLoading(false)}
-        />
-        {!isLoading && (
-          <ViewportIndicator
-            x={viewportPosition.x}
-            y={viewportPosition.y}
-            width={viewportPosition.width}
-            height={viewportPosition.height}
-          />
-        )}
-        {isLoading && (
-          <LoadingContainer>
-            <CircularProgress color="primary" size={32} />
-            <div>Loading Overview...</div>
-          </LoadingContainer>
-        )}
-      </Paper>
+      <div ref={viewerRef} style={{ width: '100%', height: '100%' }} />
+      <ViewportIndicator $position={viewportPosition} />
     </HubContainer>
   );
 };

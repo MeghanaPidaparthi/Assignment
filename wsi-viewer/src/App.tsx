@@ -41,16 +41,29 @@ const StyledWSIViewer = styled(motion.div)`
   padding: 20px;
 `;
 
-// Sample data - replace with actual data
+// Sample data - replace with actual data from your backend
 const sampleData = {
-  "id": 19,
-  "patient_id": "7",
-  "wsi_video_url": "None",
-  "inference_results": "{'delayTime': 950, 'executionTime': 7223, 'id': 'sync-e1323ad4-a299-4159-9342-1fa220a3c2b5-e1', 'output': {'detection_results': [[121, 4, 163, 45, 'Circular_RBC'], [396, 312, 433, 353, 'Circular_RBC']]}", // Shortened for brevity
-  "celery_status": "completed",
-  "filename": "7_20241209_024613.png",
-  "sample_type": "blood",
-  "date": "2024-12-09"
+  id: "19",
+  patient_id: "7",
+  wsi_video_url: "None",
+  inference_results: `{
+    "delayTime": 950,
+    "executionTime": 7223,
+    "id": "sync-e1323ad4-a299-4159-9342-1fa220a3c2b5-e1",
+    "output": {
+      "detection_results": [
+        [121, 4, 163, 45, "Circular_RBC"],
+        [396, 312, 433, 353, "Circular_RBC"],
+        [245, 167, 289, 211, "Elongated_RBC"],
+        [78, 234, 123, 278, "Elongated_RBC"],
+        [312, 89, 356, 134, "Circular_RBC"]
+      ]
+    }
+  }`,
+  celery_status: "completed",
+  filename: "sample.png",
+  sample_type: "blood",
+  date: "2024-12-09"
 };
 
 function App() {
@@ -70,10 +83,22 @@ function App() {
   });
 
   useEffect(() => {
-    // Parse the detection results when component mounts
     const parsed = parseDetectionResults(sampleData);
     setParsedData(parsed);
   }, []);
+
+  const handleViewportChange = (viewport: any) => {
+    // Convert OpenSeadragon viewport to relative coordinates for HubView
+    const bounds = viewport.center;
+    const zoom = viewport.zoom;
+    
+    setViewportPosition({
+      x: bounds.x * 100,
+      y: bounds.y * 100,
+      width: (100 / zoom) * 0.8, // 0.8 factor to account for padding
+      height: (100 / zoom) * 0.8
+    });
+  };
 
   return (
     <MuiThemeProvider theme={theme}>
@@ -109,6 +134,7 @@ function App() {
             <WSIViewer
               imageUrl={`/images/${parsedData.filename}`}
               detectionResults={parsedData.detectionResults}
+              onViewportChange={handleViewportChange}
             />
           </StyledWSIViewer>
         </AppContainer>
